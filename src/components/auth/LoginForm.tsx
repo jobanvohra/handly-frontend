@@ -4,7 +4,7 @@ import { useAuth } from '@/context/useAuth';
 import { loginSchema } from '@/schemas/auth.schema';
 import { LoginData } from '@/types/user';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 
@@ -21,12 +21,14 @@ export default function LoginForm() {
 	const [authError, setAuthError] = useState<string | null>(null);
 	const { login } = useAuth();
 	const router = useRouter();
+	const searchParams = useSearchParams();
+	const redirectTo = searchParams.get('redirect') || 'dashboard';
 
 	const onSubmit = async (data: LoginData) => {
 		setAuthError(null);
 		try {
 			await login(data);
-			router.push('/dashboard');
+			router.push(redirectTo);
 		} catch (error) {
 			setAuthError(
 				error instanceof Error ? error.message : 'Login failed',

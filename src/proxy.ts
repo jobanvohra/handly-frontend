@@ -1,10 +1,10 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
-const protectedPaths = ['/dashboard', '/search', '/bookings', '/provider']
+const protectedPaths = ['/dashboard', '/bookings', '/provider/profile', '/provider/availability']
 const authOnlyPaths = ['/login', '/register']
 
-export function middleware(request: NextRequest) {
+export function proxy(request: NextRequest) {
     const token = request.cookies.get('token')
     const { pathname } = request.nextUrl
 
