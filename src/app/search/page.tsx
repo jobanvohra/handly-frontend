@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import dynamic from 'next/dynamic';
 import LocationSearch from '@/components/search/LocationSearch';
+import { useRouter, useSearchParams } from 'next/navigation';
 
 const SearchMap = dynamic(() => import('@/components/search/SearchMap'), {
 	ssr: false,
@@ -11,6 +12,10 @@ const SearchMap = dynamic(() => import('@/components/search/SearchMap'), {
 
 type Provider = {
 	_id: string;
+	user: {
+		name: string;
+		_id: string;
+	};
 	category: string;
 	ratePerHour: number;
 	address: string;
@@ -25,6 +30,32 @@ export default function SearchPage() {
 	);
 	const [category, setCategory] = useState('');
 	const [radius, setRadius] = useState(10);
+	const [query, setQuery] = useState('');
+	const router = useRouter();
+	const searchParams = useSearchParams();
+
+	const handleProviderClick = (providerId: string) => {
+		const params = new URLSearchParams(searchParams.toString());
+
+		router.push(`/providers/${providerId}?${params.toString()}`);
+	};
+
+	useEffect(() => {
+		if (!coords) return;
+		const params = new URLSearchParams(searchParams.toString());
+
+		const lat = coords.lat.toString();
+		const lng = coords.lng.toString();
+
+		if (params.get('lat') === lat && params.get('lng') === lng) {
+			return;
+		}
+
+		params.set('lat', coords.lat.toString());
+		params.set('lng', coords.lng.toString());
+
+		router.replace(`?${params.toString()}`);
+	}, [coords, searchParams, router]);
 
 	useEffect(() => {
 		navigator.geolocation.getCurrentPosition((position) => {
@@ -41,7 +72,10 @@ export default function SearchPage() {
 			`/api/providers/search?lat=${coords.lat}&lng=${coords.lng}&category=${category}&maxDistanceKm=${radius}`,
 		)
 			.then((res) => res.json())
-			.then((json) => setProviders(json.data));
+			.then((json) => {
+				setProviders(json.data);
+				console.log(json.data);
+			});
 	}, [coords, category, radius]);
 
 	if (!coords) return <p>Loading....</p>;
@@ -50,6 +84,8 @@ export default function SearchPage() {
 		<div>
 			<LocationSearch
 				onSelect={(loc) => setCoords({ lat: loc.lat, lng: loc.lng })}
+				query={query}
+				setQuery={setQuery}
 			/>
 
 			<select
@@ -77,12 +113,19 @@ export default function SearchPage() {
 					providers={providers}
 					centerLat={coords.lat}
 					centerLng={coords.lng}
+					setQuery={setQuery}
+					setCoords={setCoords}
 				/>
 			)}
 
 			<div>
 				{providers.map((p) => (
-					<div key={p._id}>{p.category}</div>
+					<div
+						key={p._id}
+						onClick={() => handleProviderClick(p.user._id)}
+					>
+						{p.category}
+					</div>
 				))}
 			</div>
 		</div>

@@ -1,6 +1,13 @@
 'use client';
 
-import { MapContainer, Marker, Popup, TileLayer, useMap } from 'react-leaflet';
+import {
+	MapContainer,
+	Marker,
+	Popup,
+	TileLayer,
+	useMap,
+	useMapEvents,
+} from 'react-leaflet';
 import L from 'leaflet';
 import { useEffect } from 'react';
 
@@ -29,6 +36,10 @@ type SearchMapProps = {
 	providers: Provider[];
 	centerLat: number;
 	centerLng: number;
+	setQuery: React.Dispatch<React.SetStateAction<string>>;
+	setCoords: React.Dispatch<
+		React.SetStateAction<{ lat: number; lng: number } | null>
+	>;
 };
 
 function RecenterMap({ lat, lng }: { lat: number; lng: number }) {
@@ -41,11 +52,49 @@ function RecenterMap({ lat, lng }: { lat: number; lng: number }) {
 	return null;
 }
 
+function MapClickHandler({
+	onSelect,
+}: {
+	onSelect: (lat: number, lng: number) => void;
+}) {
+	useMapEvents({
+		click(e) {
+			const { lat, lng } = e.latlng;
+
+			onSelect(lat, lng);
+		},
+	});
+
+	return null;
+}
+
 export default function SearchMap({
 	providers,
 	centerLat,
 	centerLng,
+	setQuery,
+	setCoords,
 }: SearchMapProps) {
+	const handleMapClick = async (lat: number, lng: number) => {
+		try {
+			const res = await fetch(
+				`https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json`,
+			);
+			const data = await res.json();
+
+			if (!res.ok) {
+				throw new Error('Failed to get address');
+			}
+
+			setQuery(data.display_name);
+			setCoords({ lat, lng });
+		} catch (error) {
+			console.error('Reverse geocoding failed:', error);
+
+			setCoords({ lat, lng });
+		}
+	};
+
 	return (
 		<MapContainer
 			center={[centerLat, centerLng]}
@@ -53,12 +102,13 @@ export default function SearchMap({
 			style={{ height: '500px', width: '100%' }}
 		>
 			<RecenterMap lat={centerLat} lng={centerLng} />
+			<MapClickHandler onSelect={handleMapClick} />
 			<TileLayer
 				url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
 				attribution="&copy; OpenStreetMap contributors"
 			/>
 			<Marker position={[centerLat, centerLng]}>
-				<Popup>Your current position</Popup>
+				<Popup>Selected service location</Popup>
 			</Marker>
 			{providers.map((p) => (
 				<Marker

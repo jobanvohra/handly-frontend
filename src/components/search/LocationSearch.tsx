@@ -16,10 +16,13 @@ type NominatimResult = {
 
 export default function LocationSearch({
 	onSelect,
+	query,
+	setQuery,
 }: {
 	onSelect: (loc: { lat: number; lng: number; label: string }) => void;
+	query: string;
+	setQuery: React.Dispatch<React.SetStateAction<string>>;
 }) {
-	const [query, setQuery] = useState('');
 	const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
 
 	useEffect(() => {
