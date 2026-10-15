@@ -153,7 +153,7 @@ export default function BookingForm({ providerId }: { providerId: string }) {
 				throw new Error(results.message);
 			}
 
-			router.replace('/dashboard/customer');
+			router.replace('/bookings');
 		} catch (error) {
 			setBookingError(
 				error instanceof Error ? error.message : 'Booking failed',
@@ -164,75 +164,240 @@ export default function BookingForm({ providerId }: { providerId: string }) {
 	if (isLoading || !user) return null;
 
 	return (
-		<form onSubmit={handleSubmit(onSubmit)}>
-			<div>
-				<label>Service location</label>
+		<form
+			onSubmit={handleSubmit(onSubmit)}
+			className="mx-auto max-w-6xl px-4 sm:px-6 py-6 sm:py-8"
+		>
+			<div className="mb-8">
+				<button
+					type="button"
+					onClick={() => router.back()}
+					className="mb-4 text-sm font-medium text-muted-foreground transition hover:text-foreground"
+				>	
+					← Back
+				</button>
 
-				{selectedLocation && !isMapOpen && (
-					<div>
-						<p>
-							{selectedLocation.lat},{selectedLocation.lng}
+				<h1 className="text-3xl font-semibold tracking-tight">
+					Book a service
+				</h1>
+
+				<p className="mt-2 text-sm text-muted-foreground">
+					Choose when and where you need the service.
+				</p>
+			</div>
+
+			<div className="grid gap-6 lg:grid-cols-[1.5fr_0.8fr]">
+				<div className="rounded-2xl border border-border bg-card p-6 shadow-sm">
+					<div className="mb-6">
+						<h2 className="text-lg font-semibold">
+							Service location
+						</h2>
+						<p className="mt-1 text-sm text-muted-foreground">
+							Select where you want the service.
 						</p>
+					</div>
+
+					{selectedLocation && !isMapOpen && (
+						<div className="rounded-xl border border-border bg-surface p-4">
+							<div className="flex items-start justify-between gap-4">
+								<div className="min-w-0">
+									<p className="text-sm font-medium">
+										Selected location
+									</p>
+
+									<p className="mt-1 text-sm text-secondary-foreground">
+										{geocodeAddress || 'Location selected'}
+									</p>
+								</div>
+
+								<button
+									type="button"
+									onClick={() => {
+										setLocationError(null);
+										setIsMapOpen(true);
+									}}
+									className="shrink-0 rounded-lg border border-border bg-card px-3 py-2 text-sm font-medium transition hover:bg-background"
+								>
+									Change
+								</button>
+							</div>
+						</div>
+					)}
+
+					{!selectedLocation && !isMapOpen && (
 						<button
 							type="button"
-							onClick={() => {
-								setLocationError(null);
-								setIsMapOpen(true);
-							}}
+							onClick={() => setIsMapOpen(true)}
+							className="w-full rounded-xl border border-dashed border-border-strong bg-surface px-4 py-8 text-sm font-medium transition hover:border-primary hover:bg-secondary-background"
 						>
-							Change location
+							Select service location
 						</button>
+					)}
+
+					{isMapOpen && (
+						<div className="overflow-hidden rounded-xl border border-border">
+							<div className="h-95">
+								<BookingLocationMap
+									onSelect={handleLocationSelect}
+									center={selectedLocation}
+									query={searchQuery}
+									setQuery={setSearchQuery}
+								/>
+							</div>
+						</div>
+					)}
+
+					{checkingLocation && (
+						<p className="mt-3 rounded-lg bg-secondary-background px-3 py-2 text-sm text-secondary-foreground">
+							Checking service availability...
+						</p>
+					)}
+
+					{locationError && (
+						<p className="mt-3 rounded-lg bg-error-background px-3 py-2 text-sm text-error">
+							{locationError}
+						</p>
+					)}
+
+					<div className="mt-8 border-t border-border pt-7">
+						<div className="mb-5">
+							<h2 className="text-lg font-semibold">
+								Service details
+							</h2>
+							<p className="mt-1 text-sm text-muted-foreground">
+								Add the details for your booking.
+							</p>
+						</div>
+
+						<div className="space-y-5">
+							<div>
+								<label
+									htmlFor="service-address"
+									className="mb-2 block text-sm font-medium"
+								>
+									Exact address
+								</label>
+
+								<input
+									id="service-address"
+									{...register('exactAddress')}
+									placeholder="House number, street, landmark..."
+									className="h-11 w-full rounded-lg border border-border bg-background px-3 text-sm outline-none transition placeholder:text-muted-foreground focus:border-primary focus:ring-2 focus:ring-primary/15"
+								/>
+
+								{errors.exactAddress && (
+									<p className="mt-1.5 text-sm text-error">
+										{errors.exactAddress.message}
+									</p>
+								)}
+							</div>
+
+							<div>
+								<label
+									htmlFor="requested-time"
+									className="mb-2 block text-sm font-medium"
+								>
+									Requested date & time
+								</label>
+
+								<input
+									id="requested-time"
+									type="datetime-local"
+									{...register('requestedTime')}
+									className="h-11 w-full rounded-lg border border-border bg-background px-3 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/15"
+								/>
+
+								{errors.requestedTime && (
+									<p className="mt-1.5 text-sm text-error">
+										{errors.requestedTime.message}
+									</p>
+								)}
+							</div>
+
+							<div>
+								<label
+									htmlFor="notes"
+									className="mb-2 block text-sm font-medium"
+								>
+									Notes{' '}
+									<span className="font-normal text-muted-foreground">
+										(optional)
+									</span>
+								</label>
+
+								<textarea
+									id="notes"
+									{...register('notes')}
+									placeholder="Anything the provider should know?"
+									rows={4}
+									className="w-full resize-none rounded-lg border border-border bg-background px-3 py-3 text-sm outline-none transition placeholder:text-muted-foreground focus:border-primary focus:ring-2 focus:ring-primary/15"
+								/>
+							</div>
+						</div>
 					</div>
-				)}
 
-				{!selectedLocation && !isMapOpen && (
-					<button type="button" onClick={() => setIsMapOpen(true)}>
-						Select location
+					{bookingError && (
+						<p className="mt-5 rounded-lg bg-error-background px-4 py-3 text-sm text-error">
+							{bookingError}
+						</p>
+					)}
+
+					<button
+						type="submit"
+						disabled={isSubmitting || checkingLocation}
+						className="mt-6 h-12 w-full rounded-lg bg-primary px-5 text-sm font-semibold text-primary-foreground transition hover:bg-primary-hover disabled:cursor-not-allowed disabled:opacity-60"
+					>
+						{isSubmitting ? 'Booking...' : 'Confirm Booking'}
 					</button>
-				)}
+				</div>
 
-				{selectedLocation && isMapOpen && (
-					<BookingLocationMap
-						onSelect={handleLocationSelect}
-						center={selectedLocation}
-						query={searchQuery}
-						setQuery={setSearchQuery}
-					/>
-				)}
+				<div className="h-fit rounded-2xl border border-border bg-card p-6 shadow-sm lg:sticky lg:top-6">
+					<h2 className="text-lg font-semibold">Booking summary</h2>
 
-				{checkingLocation && <p>Checking service availability..</p>}
+					<div className="mt-6 space-y-5">
+						<div>
+							<p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+								Service location
+							</p>
 
-				{locationError && <p>{locationError}</p>}
-			</div>
-			<div>
-				<label htmlFor="service-address">Service Address</label>
-				<input
-					id="service-address"
-					{...register('exactAddress')}
-					placeholder="Enter the exact address"
-				/>
-				{errors.exactAddress && <p>{errors.exactAddress.message}</p>}
-			</div>
+							<p className="mt-1 text-sm">
+								{geocodeAddress ||
+									'Select a location to continue'}
+							</p>
+						</div>
 
-			<div>
-				<label htmlFor="requested-time">Requested Time</label>
-				<input
-					id="requested-time"
-					type="datetime-local"
-					{...register('requestedTime')}
-				/>
-				{errors.requestedTime && <p>{errors.requestedTime.message}</p>}
-			</div>
-			<div>
-				<label htmlFor="notes">Notes (optional)</label>
-				<textarea id="notes" {...register('notes')} />
-			</div>
+						<div className="border-t border-border pt-5">
+							<p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+								Exact address
+							</p>
 
-			{bookingError && <p>{bookingError}</p>}
-			<div>
-				<button type="submit" disabled={isSubmitting}>
-					{isSubmitting ? 'Booking ...' : 'Confirm Booking'}
-				</button>
+							<p className="mt-1 text-sm">Not entered</p>
+						</div>
+
+						<div className="border-t border-border pt-5">
+							<p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+								Requested time
+							</p>
+
+							<p className="mt-1 text-sm">Not selected</p>
+						</div>
+
+						{selectedLocation &&
+							geocodeAddress &&
+							!locationError && (
+								<div className="rounded-xl bg-accent-background p-4">
+									<p className="text-sm font-medium text-accent-foreground">
+										Location verified
+									</p>
+
+									<p className="mt-1 text-xs text-accent-foreground/80">
+										This location is within the
+										provider&apos;s service area.
+									</p>
+								</div>
+							)}
+					</div>
+				</div>
 			</div>
 		</form>
 	);

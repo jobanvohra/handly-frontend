@@ -12,7 +12,7 @@ type AuthContextType = {
 	}: {
 		email: string;
 		password: string;
-	}) => Promise<void>;
+	}) => Promise<User>;
 	register: ({
 		email,
 		password,
@@ -23,8 +23,9 @@ type AuthContextType = {
 		password: string;
 		name: string;
 		role: 'customer' | 'provider';
-	}) => Promise<void>;
+	}) => Promise<User>;
 	logout: () => Promise<void>;
+	refreshUser: () => Promise<User | null>;
 	isLoading: boolean;
 };
 
@@ -34,32 +35,40 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 	const [user, setUser] = useState<User | null>(null);
 	const [isLoading, setIsLoading] = useState(true);
 
-	useEffect(() => {
-		const getUser = async () => {
-			try {
-				const response = await fetch(`/api/auth/user`, {
-					credentials: 'include',
-				});
+	const fetchUser = async (): Promise<User | null> => {
+		try {
+			const response = await fetch(`/api/auth/user`, {
+				credentials: 'include',
+			});
 
-				if (!response.ok) {
-					setUser(null);
-					return;
-				}
-
-				const data = await response.json();
-				setUser(data.data);
-				console.log(data.data);
-			} catch (error) {
-				console.error(error);
+			if (!response.ok) {
 				setUser(null);
+				return null;
+			}
+
+			const data = await response.json();
+			const userData = data.data?.user || data.data || null;
+			setUser(userData);
+			return userData;
+		} catch (error) {
+			console.error(error);
+			setUser(null);
+			return null;
+		}
+	};
+
+	useEffect(() => {
+		const init = async () => {
+			try {
+				await fetchUser();
 			} finally {
 				setIsLoading(false);
 			}
 		};
-		getUser();
+		init();
 	}, []);
 
-	const login = async ({ email, password }: LoginData) => {
+	const login = async ({ email, password }: LoginData): Promise<User> => {
 		const response = await fetch(`/api/auth/login`, {
 			method: 'POST',
 			headers: { 'Content-Type': 'application/json' },
@@ -69,10 +78,12 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 		const data = await response.json();
 
 		if (!response.ok) {
-			throw new Error(data.message);
+			throw new Error(data.message || 'Login failed');
 		}
 
-		setUser(data.user);
+		const userData = data.data?.user || data.data || data.user;
+		setUser(userData);
+		return userData;
 	};
 
 	const register = async ({
@@ -85,7 +96,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 		email: string;
 		password: string;
 		role: 'customer' | 'provider';
-	}) => {
+	}): Promise<User> => {
 		const response = await fetch(`/api/auth/register`, {
 			method: 'POST',
 			headers: { 'Content-Type': 'application/json' },
@@ -95,9 +106,12 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
 		const data = await response.json();
 		if (!response.ok) {
-			throw new Error(data.message);
+			throw new Error(data.message || 'Registration failed');
 		}
-		setUser(data.user);
+
+		const userData = data.data?.user || data.data || data.user;
+		setUser(userData);
+		return userData;
 	};
 
 	const logout = async () => {
@@ -107,9 +121,13 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 		});
 		const data = await response.json();
 		if (!response.ok) {
-			throw new Error(data.message);
+			throw new Error(data.message || 'Logout failed');
 		}
 		setUser(null);
+	};
+
+	const refreshUser = async () => {
+		return await fetchUser();
 	};
 
 	return (
@@ -120,6 +138,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 				login,
 				register,
 				logout,
+				refreshUser,
 				isLoading,
 			}}
 		>

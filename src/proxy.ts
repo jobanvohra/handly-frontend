@@ -1,42 +1,55 @@
-import { jwtVerify } from "jose";
+import { JWTPayload, jwtVerify } from "jose";
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
-const protectedPaths = ['/dashboard', '/bookings']
-const authOnlyPaths = ['/login', '/register']
+type AuthPayload = JWTPayload & {
+    id: string;
+    name: string;
+    role: 'customer' | 'provider';
+};
 
 const secret = new TextEncoder().encode(process.env.JWT_SECRET)
 
-async function isValidToken(token: string): Promise<boolean> {
+async function getAuth(token?: string): Promise<AuthPayload | null> {
     try {
-        await jwtVerify(token, secret)
-        return true
+        if (!token) return null
+        const { payload } = await jwtVerify(token, secret)
+        return payload as AuthPayload
     } catch {
-        return false
+        return null
     }
 }
 
 export async function proxy(request: NextRequest) {
-    const token = request.cookies.get('token')?.value
     const { pathname } = request.nextUrl
+    const token = request.cookies.get('token')?.value
+    const auth = await getAuth(token)
 
-    const isBookingPath = pathname.startsWith('/providers/') && pathname.endsWith('/book');
-    const isProtected = protectedPaths.some(path => pathname.startsWith(path)) || isBookingPath
-    const isAuthPage = authOnlyPaths.some(path => pathname.startsWith(path))
+    const protectedRoute =
+        pathname.startsWith('/profile') ||
+        pathname.startsWith('/bookings') ||
+        pathname.startsWith('/dashboard') ||
+        /^\/providers\/[^/]+\/book$/.test(pathname)
 
-    const validToken = token ? await isValidToken(token) : false
-
-    if (isProtected && !validToken) {
+    if (protectedRoute && !auth) {
         return NextResponse.redirect(new URL('/login', request.url))
     }
 
-    if (isAuthPage && validToken) {
-        return NextResponse.redirect(new URL('/dashboard', request.url))
+    const authRoute =
+        pathname.startsWith('/login') ||
+        pathname.startsWith('/register')
+
+    if (authRoute && auth) {
+        return NextResponse.redirect(new URL('/bookings', request.url))
+    }
+
+    if (pathname === '/dashboard') {
+        return NextResponse.redirect(new URL('/bookings', request.url))
     }
 
     return NextResponse.next()
 }
 
 export const config = {
-    matcher: ['/dashboard/:path*', '/search/:path*', '/bookings/:path*', '/providers/:id/book', '/login', '/register']
+    matcher: ['/profile/:path*', '/bookings/:path*', '/dashboard/:path*', '/search/:path*', '/providers/:id/book', '/login', '/register']
 }

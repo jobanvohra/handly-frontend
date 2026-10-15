@@ -1,3 +1,5 @@
-export default function ProviderDashboard() {
-	return <div>ProviderDashboard</div>;
+import { redirect } from 'next/navigation';
+
+export default function ProviderDashboardPage() {
+	redirect('/bookings');
 }

@@ -29,7 +29,7 @@ type Location = {
 };
 
 type BookingLocationMapProps = {
-	center: Location;
+	center: Location | null;
 	query: string;
 	setQuery: React.Dispatch<React.SetStateAction<string>>;
 	onSelect: (loc: { lat: number; lng: number; label: string }) => void;
@@ -67,6 +67,8 @@ export default function BookingLocationMap({
 	setQuery,
 	onSelect,
 }: BookingLocationMapProps) {
+	const defaultCenter: Location = center || { lat: 28.6139, lng: 77.209 };
+
 	return (
 		<div>
 			<LocationSearch
@@ -76,7 +78,7 @@ export default function BookingLocationMap({
 			/>
 
 			<MapContainer
-				center={[center.lat, center.lng]}
+				center={[defaultCenter.lat, defaultCenter.lng]}
 				zoom={13}
 				style={{ height: '400px', width: '100%' }}
 			>
@@ -87,9 +89,9 @@ export default function BookingLocationMap({
 
 				<MapClickHandler onSelect={onSelect} />
 
-				<RecenterMap lat={center.lat} lng={center.lng} />
+				<RecenterMap lat={defaultCenter.lat} lng={defaultCenter.lng} />
 
-				{location && <Marker position={[center.lat, center.lng]} />}
+				{center && <Marker position={[center.lat, center.lng]} />}
 			</MapContainer>
 		</div>
 	);

@@ -1,3 +1,5 @@
-export default function CustomerDashboard() {
-	return <div>Customer Dashboard</div>;
+import { redirect } from 'next/navigation';
+
+export default function CustomerDashboardPage() {
+	redirect('/bookings');
 }

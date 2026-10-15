@@ -1,6 +1,8 @@
 'use client';
 
 import {
+	Circle,
+	CircleMarker,
 	MapContainer,
 	Marker,
 	Popup,
@@ -10,6 +12,7 @@ import {
 } from 'react-leaflet';
 import L from 'leaflet';
 import { useEffect } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 
 interface IconDefaultPrototype {
 	_getIconUrl?: string;
@@ -26,6 +29,10 @@ L.Icon.Default.mergeOptions({
 type Provider = {
 	_id: string;
 	category: string;
+	user: {
+		name: string;
+		_id: string;
+	};
 	ratePerHour: number;
 	address: string;
 	location: { coordinates: [number, number] };
@@ -36,6 +43,7 @@ type SearchMapProps = {
 	providers: Provider[];
 	centerLat: number;
 	centerLng: number;
+	radius: number;
 	setQuery: React.Dispatch<React.SetStateAction<string>>;
 	setCoords: React.Dispatch<
 		React.SetStateAction<{ lat: number; lng: number } | null>
@@ -72,9 +80,12 @@ export default function SearchMap({
 	providers,
 	centerLat,
 	centerLng,
+	radius,
 	setQuery,
 	setCoords,
 }: SearchMapProps) {
+	const router = useRouter();
+	const searchParams = useSearchParams();
 	const handleMapClick = async (lat: number, lng: number) => {
 		try {
 			const res = await fetch(
@@ -95,11 +106,17 @@ export default function SearchMap({
 		}
 	};
 
+	const handlePopupClick = (providerId: string) => {
+		const params = new URLSearchParams(searchParams.toString());
+
+		router.push(`/providers/${providerId}?${params.toString()}`);
+	};
+
 	return (
 		<MapContainer
 			center={[centerLat, centerLng]}
-			zoom={13}
-			style={{ height: '500px', width: '100%' }}
+			zoom={12}
+			style={{ height: '100%', width: '100%' }}
 		>
 			<RecenterMap lat={centerLat} lng={centerLng} />
 			<MapClickHandler onSelect={handleMapClick} />
@@ -107,9 +124,17 @@ export default function SearchMap({
 				url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
 				attribution="&copy; OpenStreetMap contributors"
 			/>
-			<Marker position={[centerLat, centerLng]}>
+			<CircleMarker
+				center={[centerLat, centerLng]}
+				radius={8}
+				pathOptions={{
+					color: '#635bff',
+					fillColor: '#635bff',
+					fillOpacity: 1,
+				}}
+			>
 				<Popup>Selected service location</Popup>
-			</Marker>
+			</CircleMarker>
 			{providers.map((p) => (
 				<Marker
 					key={p._id}
@@ -119,15 +144,34 @@ export default function SearchMap({
 					]} // [lat, lng]
 				>
 					<Popup>
-						<strong>{p.category}</strong>
-						<br />₹{p.ratePerHour}/hr
-						<br />
-						{p.address}
-						<br />
-						{p.available ? '🟢 Available now' : '⚪ Not available'}
+						<div
+							onClick={() => handlePopupClick(p.user._id)}
+							className="block cursor-pointer text-foreground no-underline hover:text-primary"
+						>
+							<strong>{p.user.name}</strong>
+							<br />
+							<strong>{p.category}</strong>
+							<br />₹{p.ratePerHour}/hr
+							<br />
+							{p.address}
+							<br />
+							{p.available
+								? '🟢 Available now'
+								: '⚪ Not available'}
+						</div>
 					</Popup>
 				</Marker>
 			))}
+			<Circle
+				center={[centerLat, centerLng]}
+				radius={radius * 1000}
+				pathOptions={{
+					color: '#635bff',
+					fillColor: '#635bff',
+					fillOpacity: 0.08,
+					weight: 2,
+				}}
+			/>
 		</MapContainer>
 	);
 }
